@@ -14,8 +14,8 @@ function TrackerHttpInterceptor($q, promiseTracker) {
         }
         config.$promiseTrackerDeferred = config.$promiseTrackerDeferred || [];
 
-        angular.forEach(config.tracker, function(trackerName) {
-          var deferred = promiseTracker(trackerName).createPromise(config);
+        angular.forEach(config.tracker, function(tracker) {
+          var deferred = tracker.createPromise(config);
           config.$promiseTrackerDeferred.push(deferred);
         });
       }
