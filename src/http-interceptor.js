@@ -40,4 +40,3 @@ function TrackerHttpInterceptor($q, promiseTracker) {
   };
 }
 TrackerHttpInterceptor.$inject = ['$q', 'promiseTracker'];
-

@@ -9,8 +9,8 @@ angular.module('ajoslin.promise-tracker')
         $timeout.cancel(promise);
       }
     }
-	
-	function promiseTracker() {
+
+    function promiseTracker() {
     }
 
     promiseTracker.register = function(options) {
