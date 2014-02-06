@@ -1,9 +1,14 @@
 describe('provider', function() {
   beforeEach(module('ajoslin.promise-tracker'));
-
+  
+  var promiseTracker;
+  beforeEach(inject(function(_promiseTracker_) {
+      promiseTracker = _promiseTracker_;
+  }));
+    
   describe('basics', function() {
     var myTracker;
-    var promiseTracker, $httpBackend, $http, $q, $rootScope;
+    var $httpBackend, $http, $q, $rootScope;
     beforeEach(inject(function(_promiseTracker_, _$httpBackend_, _$http_, _$q_, _$rootScope_) {
       promiseTracker = _promiseTracker_;
       $httpBackend = _$httpBackend_;
@@ -13,35 +18,14 @@ describe('provider', function() {
       myTracker = promiseTracker.register('myTracker');
     }));
 
-    it('if we register a tracker with same name that exists already, it should error', function() {
-      expect(function() {
-        promiseTracker.register('myTracker');
-      }).toThrow();
-    });
-
-    it('should throw an error if we ge ta tracker that doesn\'t exist', function() {
-      expect(function() {
-        promiseTracker('new guy');
-      }).toThrow();
-      promiseTracker.register('new guy');
-      expect(promiseTracker('new guy')).toBeTruthy();
-    });
-
     it('should remove a tracker on deregister', function() {
       spyOn(myTracker, '_destroy');
-      promiseTracker.deregister('myTracker');
+      promiseTracker.deregister(myTracker);
       expect(myTracker._destroy).toHaveBeenCalled();
-      expect(function() {
-        promiseTracker('myTracker');
-      }).toThrow();
     });
 
     it('should create a new tracker', function() {
       expect(myTracker).toBeTruthy();
-    });
-
-    it('should get the tracker each time myTracker(name) is called', function() {
-      expect(promiseTracker('myTracker')).toBe(myTracker);
     });
 
     it('should be inactive at start', function() {
@@ -104,20 +88,14 @@ describe('provider', function() {
 
   describe('options', function() {
 
-    function setup(id, options) {
-      inject(function(promiseTracker) {
-        promiseTracker.register(id, options || {});
-      });
-    }
-
     describe('minimum duration', function() {
 
+      var track;
       beforeEach(function() {
-        setup('tracky', { minDuration: 500 });
+        track = promiseTracker.register({ minDuration: 500 });
       });
 
-      it('should wait until timeout is over to go inactive', inject(function($timeout, $q, $rootScope, promiseTracker) {
-        var track = promiseTracker('tracky');
+      it('should wait until timeout is over to go inactive', inject(function($timeout, $q, $rootScope) {
         var d = $q.defer();
         track.addPromise(d.promise);
         expect(track.active()).toBe(true);
@@ -131,12 +109,13 @@ describe('provider', function() {
     });
 
     describe('maximum duration', function() {
+
+      var track;
       beforeEach(function() {
-        setup('trackyer', { maxDuration: 10000 });
+        track = promiseTracker.register({ maxDuration: 10000 });
       });
 
-      it('should end on its own after maxDuration', inject(function($q, $timeout, $rootScope, promiseTracker) {
-        var track = promiseTracker('trackyer');
+      it('should end on its own after maxDuration', inject(function($q, $timeout, $rootScope) {
         var d1 = $q.defer();
         track.addPromise(d1.promise);
         expect(track.active()).toBe(true);
@@ -144,8 +123,7 @@ describe('provider', function() {
         expect(track.active()).toBe(false);
       }));
 
-      it('should cleanup the maxDuration timeout after finishing', inject(function($q, $timeout, $rootScope, promiseTracker) {
-        var track = promiseTracker('trackyer');
+      it('should cleanup the maxDuration timeout after finishing', inject(function($q, $timeout, $rootScope) {
         var d1 = $q.defer();
         spyOn($timeout, 'cancel');
         expect(track._maxPromise).toBeUndefined();
@@ -161,12 +139,13 @@ describe('provider', function() {
     });
 
     describe('activation delay', function() {
+    
+      var track;
       beforeEach(function() {
-        setup('good tracker', { activationDelay: 750 });
+        track = promiseTracker.register({ activationDelay: 750 });
       });
 
-      it('should not be active until delay elapses', inject(function($q, $timeout, $rootScope, promiseTracker) {
-        var track = promiseTracker('good tracker');
+      it('should not be active until delay elapses', inject(function($q, $timeout, $rootScope) {
         var d = $q.defer();
         expect(track._delayPromise).toBeUndefined();
         track.addPromise(d.promise);
@@ -178,8 +157,7 @@ describe('provider', function() {
         expect(track.active()).toBe(false);
       }));
 
-      it('should, even if adding multiple promises, not be active until delay elapses', inject(function($q, $timeout, $rootScope, promiseTracker) {
-        var track = promiseTracker('good tracker');
+      it('should, even if adding multiple promises, not be active until delay elapses', inject(function($q, $timeout, $rootScope) {
         var d1 = $q.defer(), d2 = $q.defer();
         track.addPromise(d1.promise);
         expect(track.active()).toBe(false);
@@ -195,8 +173,7 @@ describe('provider', function() {
         expect(track.active()).toBe(false);
       }));
 
-      it('should cleanup activationDelay $timeout if the tracker ends early', inject(function($q, $timeout, $rootScope, promiseTracker) {
-        var track = promiseTracker('good tracker');
+      it('should cleanup activationDelay $timeout if the tracker ends early', inject(function($q, $timeout, $rootScope) {
         var d1 = $q.defer();
         spyOn($timeout, 'cancel');
         track.addPromise(d1.promise);
@@ -210,14 +187,18 @@ describe('provider', function() {
 
     });
 
-    describe('activationDelay, minDuration, maxDuration', function() {
-      it('min and activationDelay', function() {
-        setup('md', {
+    describe('min and activationDelay', function() {
+    
+      var track;
+      beforeEach(function() {
+        track = promiseTracker.register({
           activationDelay: 100,
           minDuration: 200
         });
-        inject(function($timeout, $q, $rootScope, promiseTracker) {
-          var track = promiseTracker('md');
+      });
+        
+      it('should delay activation and deactivate the tracker only after minDuration expires', function() {
+        inject(function($timeout, $q, $rootScope) {
           var d1 = $q.defer();
           track.addPromise(d1.promise);
           expect(track.active()).toBe(false);
@@ -231,13 +212,20 @@ describe('provider', function() {
           expect(track.active()).toBe(false);
         });
       });
-      it('max and activationDelay', function() {
-        setup('maxd', {
+    });
+    
+    describe('max and activationDelay', function() { 
+    
+      var track;
+      beforeEach(function() {
+        track = promiseTracker.register({
           activationDelay: 100,
           maxDuration: 200
         });
-        inject(function($timeout, $q, $rootScope, promiseTracker) {
-          var track = promiseTracker('maxd');
+      });
+      
+      it('should delay activation and deactivate the tracker after maxDuration expires', function() {
+        inject(function($timeout, $q, $rootScope) {
           var d1 = $q.defer();
           track.addPromise(d1.promise);
           $timeout.flush(); //delay goes
@@ -248,5 +236,4 @@ describe('provider', function() {
       });
     });
   });
-
 });

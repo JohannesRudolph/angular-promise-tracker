@@ -2,8 +2,6 @@
 angular.module('ajoslin.promise-tracker')
 
 .provider('promiseTracker', function() {
-  var trackers = {};
-
 
   this.$get = ['$q', '$timeout', function($q, $timeout) {
     function cancelTimeout(promise) {
@@ -11,26 +9,17 @@ angular.module('ajoslin.promise-tracker')
         $timeout.cancel(promise);
       }
     }
-
-    function promiseTracker(id) {
-      if (!trackers[id]) {
-        throw new Error('Tracker with id "' + id + '" does not exist! Use promiseTracker.register()');
-      }
-      return trackers[id];
+	
+	function promiseTracker() {
     }
 
-    promiseTracker.register = function(id, options) {
-      if (trackers[id]) {
-        throw new Error('Tracker with id "' + id + '" already exists!');
-      }
-      trackers[id] = new Tracker(options);
-      return trackers[id];
+    promiseTracker.register = function(options) {
+      return new Tracker(options);
     };
 
-    promiseTracker.deregister = function(id) {
-      if (trackers[id]) {
-        trackers[id]._destroy();
-        delete trackers[id];
+    promiseTracker.deregister = function(tracker) {
+      if (tracker) {
+        tracker._destroy();
       }
     };
 
